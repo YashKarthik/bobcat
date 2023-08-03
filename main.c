@@ -25,7 +25,7 @@ int main (int argc, char *argv[]) {
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize);
 
   for (int i = 1; i < argc; i++) {
-    if (access(argv[i], F_OK) != 0) {
+    if (access(argv[i], F_OK) != 0 || argv[i] == NULL) {
       printf("File %s does not exist.\n", argv[i]);
       return 1;
     }
@@ -43,30 +43,20 @@ int main (int argc, char *argv[]) {
 
 
     FILE *f = fopen(argv[i], "r");
+    char *line = NULL; // getlines will allocate buffer and assign pointer to this
+    size_t len = 0;
+    ssize_t read;
+    int lineNum = 0;
 
-    fseek(f, 0, SEEK_END);
-    long fileSize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    char* buffer = malloc(fileSize+1);
-    if (buffer == NULL) {
-      printf("Could not allocate memory for buffer.\n");
-      fclose(f);
-      return 1;
+    while ((read = getline(&line, &len, f)) != -1) {
+      if (isTerminal) {
+        printf(ANSI_COLOR_GRAY " %i  | " ANSI_COLOR_RESET, lineNum);
+      }
+      printf("%s", line);
+      lineNum++;
     }
 
-    size_t bytesRead = fread(buffer, 1, fileSize, f);
-    if (bytesRead != fileSize) {
-      printf("Error reading file.\n");
-      free(buffer);
-      fclose(f);
-      return 1;
-    }
-
-    buffer[fileSize] = '\0';
-
-    printf("%s", buffer);
-    free(buffer);
+    free(line);
     fclose(f);
   }
   printf("\n");
